@@ -1,4 +1,4 @@
-import os
+import sys
 from threading import Timer
 import logging
 import configparser
@@ -29,13 +29,15 @@ class BaseClient:
     def connect(self):
         self.manager = DeviceManager(adapter_name=self.config['device']['adapter'], mac_address=self.config['device']['mac_addr'], alias=self.config['device']['alias'])
         self.manager.discover()
-
+        # detected_devices = []
         if not self.manager.device_found:
             logging.error(f"Device not found: {self.config['device']['alias']} => {self.config['device']['mac_addr']}, please check the details provided.")
             for dev in self.manager.devices():
                 if dev.alias() != None and dev.alias().startswith(ALIAS_PREFIX):
                     logging.debug(f"Possible device found! ======> {dev.alias()} > [{dev.mac_address}]")
+                    # detected_devices.append([dev.alias(), dev.mac_address])
             self.__stop_service()
+            # return detected_devices
 
         self.device = Device(mac_address=self.config['device']['mac_addr'], manager=self.manager, on_resolved=self.__on_resolved, on_data=self.on_data_received, on_connect_fail=self.__on_connect_fail, notify_uuid=NOTIFY_CHAR_UUID, write_uuid=WRITE_CHAR_UUID)
 
@@ -124,7 +126,8 @@ class BaseClient:
         self.__stop_service()
 
     def __stop_service(self):
+        logging.debug("Shutting down...")
         if self.timer is not None and self.timer.is_alive():
             self.timer.cancel()
         self.manager.stop()
-        os._exit(os.EX_OK)
+        sys.exit()
